@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
+  Camera,
   Check,
   CheckCircle2,
   Clock3,
@@ -442,7 +443,7 @@ function RecyclerDetails({ id }: { id: string }) {
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className={`size-5 rounded-md border flex items-center justify-center ${
+                              className={`size-5 rounded-md border flex items-center justify-center shrink-0 ${
                                 isSelected
                                   ? 'bg-emerald-600 border-emerald-600 text-white'
                                   : 'border-gray-300 bg-white'
@@ -450,6 +451,17 @@ function RecyclerDetails({ id }: { id: string }) {
                             >
                               {isSelected && <Check size={14} />}
                             </div>
+                            {item.photo?.url ? (
+                              <img
+                                src={item.photo.url}
+                                alt={matName}
+                                className="size-9 rounded-lg object-cover border border-emerald-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="size-9 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 text-gray-400">
+                                <Package size={16} />
+                              </div>
+                            )}
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{matName}</p>
                               <p className="text-xs text-gray-500">
@@ -553,6 +565,7 @@ function RequestDetails({ id, recycler = false }: { id: string; recycler?: boole
   const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   // Modals for actions
+  const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState<string | null>(null)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [showScheduleModal, setShowScheduleModal] = useState(false)
@@ -867,16 +880,45 @@ function RequestDetails({ id, recycler = false }: { id: string; recycler?: boole
                   return (
                     <div
                       key={item._id || item.id || idx}
-                      className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-sm"
+                      className="p-3.5 bg-gray-50 rounded-xl flex items-center justify-between text-sm gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <Package size={18} className="text-emerald-600" />
-                        <div>
-                          <p className="font-semibold text-slate-900">{matName}</p>
-                          <p className="text-xs text-gray-500">{kg} kg</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {item.photo?.url ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPreviewPhoto(item.photo.url)}
+                            className="size-12 rounded-xl overflow-hidden border border-emerald-200 bg-gray-100 shrink-0 hover:opacity-90 transition-opacity"
+                            title="Click to view photo"
+                          >
+                            <img
+                              src={item.photo.url}
+                              alt={matName}
+                              className="size-full object-cover"
+                            />
+                          </button>
+                        ) : (
+                          <div className="size-12 rounded-xl bg-gray-100 text-gray-400 flex flex-col items-center justify-center shrink-0 border border-gray-200">
+                            <Camera size={16} />
+                            <span className="text-[8px] font-medium">No photo</span>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">{matName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-gray-500">{kg} kg</span>
+                            {item.photo?.url && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPreviewPhoto(item.photo.url)}
+                                className="text-[11px] text-emerald-700 hover:underline font-medium"
+                              >
+                                View photo
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <span className="font-semibold text-slate-900">{money(val)}</span>
+                      <span className="font-semibold text-slate-900 shrink-0">{money(val)}</span>
                     </div>
                   )
                 })}
@@ -1150,6 +1192,39 @@ function RequestDetails({ id, recycler = false }: { id: string; recycler?: boole
                 ) : (
                   'Confirm Completion'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Lightbox Photo Preview Modal */}
+      {selectedPreviewPhoto && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl p-5 md:p-6 max-w-lg w-full shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="font-bold text-slate-900 text-base">E-Waste Item Photo</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedPreviewPhoto(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-4 rounded-2xl overflow-hidden border border-emerald-200 bg-slate-950/5 flex items-center justify-center max-h-96">
+              <img
+                src={selectedPreviewPhoto}
+                alt="E-waste item preview"
+                className="w-full max-h-96 object-contain"
+              />
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setSelectedPreviewPhoto(null)}
+                className="btn-outline text-xs py-2 px-4"
+              >
+                Close Preview
               </button>
             </div>
           </div>

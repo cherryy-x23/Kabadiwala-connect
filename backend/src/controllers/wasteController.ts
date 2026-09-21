@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { WasteItem } from '../models/WasteItem';
 import { Material } from '../models/Material';
 import { createWasteSchema, updateWasteSchema } from '../validators/wasteValidators';
+import { uploadPhoto, deletePhoto } from '../services/cloudinaryService';
 
 export const createWaste = async (
   req: Request,
@@ -45,28 +46,51 @@ export const createWaste = async (
     const pricePerKg = material.pricePerKg ?? material.indicativePrice;
     const estimatedValue = Math.round(validatedData.quantityKg * pricePerKg * 100) / 100;
 
-    const wasteItem = await WasteItem.create({
-      collectorId: req.user.id,
-      materialId: material._id,
-      quantityKg: validatedData.quantityKg,
-      estimatedValue,
-      notes: validatedData.notes,
-      status: 'available',
-      isDeleted: false,
-    });
+    // Upload photo to Cloudinary if provided
+    let uploadedPhoto: { url: string; publicId: string } | undefined;
+    if (req.file) {
+      try {
+        uploadedPhoto = await uploadPhoto(req.file.buffer, req.file.originalname);
+      } catch (uploadErr: any) {
+        res.status(uploadErr.statusCode || 400).json({
+          success: false,
+          message: uploadErr.message || 'Photo upload failed. Please try again.',
+        });
+        return;
+      }
+    }
 
-    const populated = await WasteItem.findById(wasteItem._id).populate(
-      'materialId',
-      'name category pricePerKg indicativePrice unit priceTrend'
-    );
+    try {
+      const wasteItem = await WasteItem.create({
+        collectorId: req.user.id,
+        materialId: material._id,
+        quantityKg: validatedData.quantityKg,
+        estimatedValue,
+        notes: validatedData.notes,
+        photo: uploadedPhoto,
+        status: 'available',
+        isDeleted: false,
+      });
 
-    res.status(201).json({
-      success: true,
-      message: 'Waste item created and estimated successfully',
-      data: {
-        wasteItem: populated,
-      },
-    });
+      const populated = await WasteItem.findById(wasteItem._id).populate(
+        'materialId',
+        'name category pricePerKg indicativePrice unit priceTrend'
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Waste item created and estimated successfully',
+        data: {
+          wasteItem: populated,
+        },
+      });
+    } catch (dbErr: any) {
+      // Roll back uploaded photo in Cloudinary if database insertion fails
+      if (uploadedPhoto?.publicId) {
+        await deletePhoto(uploadedPhoto.publicId);
+      }
+      throw dbErr;
+    }
   } catch (error: any) {
     next(error);
   }

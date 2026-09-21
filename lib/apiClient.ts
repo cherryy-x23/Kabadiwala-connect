@@ -39,8 +39,10 @@ async function request<T = any>(
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${API_BASE_URL}${cleanEndpoint}`;
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers || {}),
   };
 
@@ -86,19 +88,23 @@ export const apiClient = {
   get: <T = any>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
-    request<T>(endpoint, {
+  post: <T = any>(endpoint: string, body?: any, options?: RequestInit) => {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    return request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    }),
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
+    });
+  },
 
-  patch: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
-    request<T>(endpoint, {
+  patch: <T = any>(endpoint: string, body?: any, options?: RequestInit) => {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    return request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    }),
+      body: isFormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
+    });
+  },
 
   delete: <T = any>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: 'DELETE' }),

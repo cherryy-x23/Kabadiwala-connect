@@ -17,6 +17,14 @@ export const errorHandler = (
     message = err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ');
   }
 
+  // Multer file upload errors
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = 'Image must be smaller than 5MB.';
+    }
+  }
+
   // Mongoose duplicate key error (code 11000)
   if (err.code === 11000) {
     statusCode = 409;

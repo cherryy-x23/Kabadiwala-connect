@@ -96,6 +96,10 @@ For testing and hackathon demonstration, the platform includes pre-seeded accoun
    NODE_ENV=development
    # Optional: Set your real Gemini API Key for KabiAI
    GEMINI_API_KEY=
+   # Optional: Cloudinary configuration for E-Waste photo uploads
+   CLOUDINARY_CLOUD_NAME=
+   CLOUDINARY_API_KEY=
+   CLOUDINARY_API_SECRET=
    ```
 4. Seed the database with initial materials and demo accounts:
    ```bash
@@ -177,14 +181,27 @@ npm run test:phase7b
 npm run test:phase7c
 npm run test:phase7d
 npm run test:phase8
+npm run test:photo
 ```
 
 ---
 
-## 7. Important Scope & Platform Limitations
+## 7. E-Waste Photo Upload Feature
+
+Collectors can optionally attach photographs of collected e-waste during the logging workflow:
+- **Formats Allowed**: JPG, JPEG, PNG, WEBP.
+- **Size Limit**: 5 MB maximum per image.
+- **Storage**: External storage via Cloudinary (`kabadiwala-connect/waste-items` folder). MongoDB strictly stores reference URLs and public IDs, never raw binary or base64 image data.
+- **Graceful Fallback**: If Cloudinary credentials are not configured in local environment, the server clearly informs the user without application crashes, and logging items without photos remains 100% operational.
+- **Workflow Visibility**: Photos are displayed as thumbnails in the Collector Inventory, in a detailed item modal, and within incoming Handover Requests for authorized recyclers (read-only mode).
+
+---
+
+## 8. Important Scope & Platform Limitations
 
 - **Simulated Settlement**: Payment settlements and transaction balances are strictly simulated for hackathon demonstration. No real bank accounts or financial payment gateways are integrated.
 - **No Government / Municipal Integration**: There is no direct integration with GHMC (Greater Hyderabad Municipal Corporation) or governmental APIs.
 - **No Direct SMS / WhatsApp Gateways**: Notifications are delivered in-app through the platform notification center.
 - **Maps**: Maps are powered by OpenStreetMap and Leaflet without commercial vendor locks.
 - **KabiAI**: Powered by Google Gemini when `GEMINI_API_KEY` is present in the backend `.env`. When unconfigured, a deterministic offline Mock Provider gracefully handles queries. Gemini API keys are strictly backend-only and never exposed to the frontend.
+- **Photo Upload**: Powered by Cloudinary when credentials are configured. In offline test mode, deterministic fallback mocking enables complete CI/CD verification without requiring live cloud credentials.

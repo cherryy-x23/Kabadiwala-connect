@@ -9,6 +9,10 @@ export interface IWasteItem extends Document {
   quantityKg: number;
   estimatedValue: number;
   notes?: string;
+  photo?: {
+    url: string;
+    publicId?: string;
+  };
   status: WasteStatus;
   isDeleted: boolean;
   createdAt: Date;
@@ -43,6 +47,16 @@ const wasteItemSchema = new Schema<IWasteItem>(
       type: String,
       trim: true,
       maxlength: [500, 'Notes cannot exceed 500 characters'],
+    },
+    photo: {
+      url: {
+        type: String,
+        trim: true,
+      },
+      publicId: {
+        type: String,
+        trim: true,
+      },
     },
     status: {
       type: String,

@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Activity, AlertCircle, ArrowDownRight, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Building2, Calendar, Check, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, Clock3, FileText, Filter, Headphones, HelpCircle, Home, ImagePlus, Leaf, LineChart, ListChecks, Lock, LogOut, Mail, MapPin, Menu, MessageCircle, Package, Pencil, Phone, Plus, Recycle, Search, Send, Settings, ShieldCheck, ShoppingBag, Sparkles, Star, Tag, TrendingUp, Truck, Upload, User, Users, Wallet, X, Zap, Bot, Monitor, Smartphone, Battery, Cable, Tv, Printer, WashingMachine, ChevronLeft
+  Activity, AlertCircle, ArrowDownRight, ArrowRight, ArrowUpRight, Award, BarChart3, Bell, Building2, Calendar, Camera, Check, CheckCircle2, ChevronDown, ChevronRight, CircleDollarSign, Clock3, FileText, Filter, Headphones, HelpCircle, Home, ImagePlus, Leaf, LineChart, ListChecks, Lock, LogOut, Mail, MapPin, Menu, MessageCircle, Package, Pencil, Phone, Plus, Recycle, Search, Send, Settings, ShieldCheck, ShoppingBag, Sparkles, Star, Tag, TrendingUp, Truck, Upload, User, Users, Wallet, X, Zap, Bot, Monitor, Smartphone, Battery, Cable, Tv, Printer, WashingMachine, ChevronLeft
 } from 'lucide-react'
 import Navbar from '@/components/layout/Navbar'
 import DashboardLayout from '@/components/layout/DashboardLayout'
@@ -307,9 +307,17 @@ function CollectorDashboard(){
                   return (
                     <div key={w.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                          <Package size={18}/>
-                        </div>
+                        {w.photo?.url ? (
+                          <img
+                            src={w.photo.url}
+                            alt={mat?.name || 'E-waste item'}
+                            className="size-10 rounded-xl object-cover border border-emerald-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Package size={18}/>
+                          </div>
+                        )}
                         <div>
                           <p className="font-semibold text-sm text-slate-900">{mat?.name || 'E-waste item'}</p>
                           <p className="text-xs text-gray-500">{w.quantityKg} kg · Status: {w.status.replace('_', ' ')}</p>
@@ -381,6 +389,7 @@ function CollectorInventoryView(){
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'available' | 'reserved' | 'handed_over'>('all')
+  const [selectedDetailItem, setSelectedDetailItem] = useState<WasteItem | null>(null)
 
   const fetchItems = async () => {
     setLoading(true)
@@ -478,9 +487,31 @@ function CollectorInventoryView(){
             return (
               <div key={item.id} className="card p-6 flex flex-col justify-between hover:border-emerald-300 transition-all">
                 <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="size-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Package size={20} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {item.photo?.url ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailItem(item)}
+                          className="size-14 rounded-xl overflow-hidden border border-emerald-200 bg-gray-100 shrink-0 group relative hover:opacity-90 transition-opacity"
+                          title="Click to view photo & details"
+                        >
+                          <img
+                            src={item.photo.url}
+                            alt={matName}
+                            className="size-full object-cover"
+                          />
+                        </button>
+                      ) : (
+                        <div className="size-14 rounded-xl bg-gray-50 border border-gray-200 text-gray-400 flex flex-col items-center justify-center shrink-0">
+                          <Camera size={18} />
+                          <span className="text-[9px] font-medium mt-0.5">No photo</span>
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{matName}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{catName}</p>
+                      </div>
                     </div>
                     <span
                       className={`text-xs uppercase font-bold px-2.5 py-1 rounded-full ${
@@ -494,9 +525,6 @@ function CollectorInventoryView(){
                       {item.status.replace('_', ' ')}
                     </span>
                   </div>
-
-                  <h3 className="font-bold text-slate-900 text-base mt-4">{matName}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{catName}</p>
 
                   <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-gray-100 text-sm">
                     <div>
@@ -516,10 +544,14 @@ function CollectorInventoryView(){
                   )}
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">
-                    Logged {new Date(item.createdAt).toLocaleDateString('en-IN')}
-                  </span>
+                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDetailItem(item)}
+                    className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+                  >
+                    View Details
+                  </button>
                   {item.status === 'available' ? (
                     <Link
                       href="/collector/recyclers"
@@ -534,6 +566,109 @@ function CollectorInventoryView(){
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Waste Item Details Modal */}
+      {selectedDetailItem && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl my-8 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-slate-900">E-Waste Item Details</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedDetailItem(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-5">
+              {/* Photo preview */}
+              {selectedDetailItem.photo?.url ? (
+                <div className="rounded-2xl overflow-hidden border border-emerald-200 bg-slate-950/5 flex items-center justify-center max-h-72">
+                  <img
+                    src={selectedDetailItem.photo.url}
+                    alt="Waste Item"
+                    className="w-full max-h-72 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-gray-50 border border-dashed border-gray-200 p-8 text-center text-gray-400">
+                  <Camera size={36} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-sm font-semibold text-slate-700">No photo uploaded</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    No photo was attached when this item was logged into inventory.
+                  </p>
+                </div>
+              )}
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-3.5 bg-gray-50 p-4 rounded-2xl border border-gray-100 text-sm">
+                <div>
+                  <p className="text-xs uppercase text-gray-400 font-semibold">Material</p>
+                  <p className="font-bold text-slate-900 mt-0.5">
+                    {typeof selectedDetailItem.materialId === 'object'
+                      ? selectedDetailItem.materialId?.name
+                      : 'E-waste item'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {typeof selectedDetailItem.materialId === 'object'
+                      ? selectedDetailItem.materialId?.category
+                      : 'General Electronics'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400 font-semibold">Quantity</p>
+                  <p className="font-bold text-slate-900 mt-0.5">{selectedDetailItem.quantityKg} kg</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400 font-semibold">Estimated Value</p>
+                  <p className="font-bold text-emerald-700 mt-0.5">{money(selectedDetailItem.estimatedValue)}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-400 font-semibold">Status</p>
+                  <span
+                    className={`text-xs uppercase font-bold px-2.5 py-0.5 mt-0.5 inline-block rounded-full ${
+                      selectedDetailItem.status === 'available'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : selectedDetailItem.status === 'reserved'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-sky-100 text-sky-800'
+                    }`}
+                  >
+                    {selectedDetailItem.status.replace('_', ' ')}
+                  </span>
+                </div>
+                {selectedDetailItem.notes && (
+                  <div className="col-span-2 pt-2 border-t border-gray-200/60">
+                    <p className="text-xs uppercase text-gray-400 font-semibold">Notes</p>
+                    <p className="text-xs text-gray-700 mt-1">{selectedDetailItem.notes}</p>
+                  </div>
+                )}
+                <div className="col-span-2 pt-2 border-t border-gray-200/60">
+                  <p className="text-xs uppercase text-gray-400 font-semibold">Logged On</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {new Date(selectedDetailItem.createdAt).toLocaleString('en-IN', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDetailItem(null)}
+                  className="btn-outline text-xs px-5 py-2"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -956,6 +1091,50 @@ function AddWaste(){
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdItem, setCreatedItem] = useState<WasteItem | null>(null)
 
+  // Photo upload state
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+    }
+  }, [photoPreview])
+
+  const validateAndSetFile = (file: File) => {
+    setPhotoError(null)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setPhotoError('Only JPG, PNG and WEBP images up to 5MB are allowed.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image must be smaller than 5MB.')
+      return
+    }
+
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview)
+    }
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  const handleRemovePhoto = () => {
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview)
+    }
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setPhotoError(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   useEffect(() => {
     let mounted = true
     materialsApi.getMaterials()
@@ -995,6 +1174,7 @@ function AddWaste(){
         materialId: selectedMaterial.id,
         quantityKg: parsedWeight,
         notes: notes ? `${condition}: ${notes}` : condition,
+        photo: photoFile,
       })
       setCreatedItem(item)
     } catch (err: any) {
@@ -1073,6 +1253,19 @@ function AddWaste(){
                   <p className="text-xs text-gray-400 uppercase">Status</p>
                   <span className="badge-success mt-1 inline-block">Available</span>
                 </div>
+                {createdItem.photo?.url && (
+                  <div className="col-span-2 pt-3 border-t border-gray-200/60 flex items-center gap-3">
+                    <img
+                      src={createdItem.photo.url}
+                      alt="Created Item Photo"
+                      className="size-14 rounded-xl object-cover border border-emerald-200 shadow-xs"
+                    />
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase font-semibold">Attached Photo</p>
+                      <p className="text-xs text-emerald-700 font-medium mt-0.5">Uploaded & linked to item</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap justify-center gap-3 mt-8">
@@ -1089,6 +1282,7 @@ function AddWaste(){
                     setStep(1)
                     setQuantityKg('10')
                     setNotes('')
+                    handleRemovePhoto()
                   }}
                   className="btn-ghost"
                 >
@@ -1191,22 +1385,124 @@ function AddWaste(){
 
               {step === 3 && (
                 <>
-                  <h2 className="text-xl font-bold text-slate-900">Add a photo</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    A clear image helps verified recyclers prepare.
-                  </p>
-                  <div className="mt-6 border-2 border-dashed border-emerald-200 rounded-2xl bg-emerald-50/40 p-12 text-center">
-                    <div className="size-14 rounded-2xl bg-white text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
-                      <ImagePlus size={26} />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Photo of E-Waste (Optional)</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        A clear photo helps authorized recyclers assess material condition and prepare intake.
+                      </p>
                     </div>
-                    <p className="font-semibold text-slate-900 mt-4">Drag and drop or browse files</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      PNG, JPG up to 5MB · Optional for prototype
-                    </p>
-                    <button type="button" className="btn-outline mt-5">
-                      Choose image
-                    </button>
+                    {photoFile && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200"
+                      >
+                        Remove photo
+                      </button>
+                    )}
                   </div>
+
+                  {photoError && (
+                    <div className="mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-800 flex items-start gap-2">
+                      <AlertCircle size={17} className="text-rose-600 shrink-0 mt-0.5" />
+                      <span>{photoError}</span>
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        validateAndSetFile(e.target.files[0])
+                      }
+                    }}
+                  />
+
+                  {photoPreview && photoFile ? (
+                    <div className="mt-6 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/20 p-6 flex flex-col sm:flex-row items-center gap-6">
+                      <div className="relative size-44 rounded-xl overflow-hidden bg-slate-900/5 border border-emerald-200 shrink-0 shadow-xs">
+                        <img
+                          src={photoPreview}
+                          alt="E-waste preview"
+                          className="size-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 text-center sm:text-left min-w-0">
+                        <div className="flex items-center justify-center sm:justify-start gap-2 text-emerald-700 font-semibold text-sm">
+                          <CheckCircle2 size={18} />
+                          Photo attached successfully
+                        </div>
+                        <p className="font-bold text-slate-900 mt-2 truncate text-base">
+                          {photoFile.name}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {(photoFile.size / (1024 * 1024)).toFixed(2)} MB · {photoFile.type}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="btn-outline text-xs py-2 px-3.5"
+                          >
+                            Change photo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemovePhoto}
+                            className="btn-ghost text-xs py-2 px-3.5 text-rose-600 hover:text-rose-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setIsDragging(true)
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setIsDragging(false)
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          validateAndSetFile(e.dataTransfer.files[0])
+                        }
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`mt-6 border-2 border-dashed rounded-2xl p-10 md:p-12 text-center cursor-pointer transition-all ${
+                        isDragging
+                          ? 'border-emerald-500 bg-emerald-100/50 scale-[0.99]'
+                          : 'border-emerald-300/80 bg-emerald-50/40 hover:bg-emerald-50/70 hover:border-emerald-500'
+                      }`}
+                    >
+                      <div className="size-16 rounded-2xl bg-white text-emerald-600 flex items-center justify-center mx-auto shadow-xs border border-emerald-100">
+                        <Camera size={30} />
+                      </div>
+                      <p className="font-bold text-slate-900 text-lg mt-4">Add Photo</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Click to upload image or drag & drop
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        JPG, PNG or WEBP · Max 5MB · Optional
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}
+                        className="btn-outline text-xs mt-5 inline-flex items-center gap-2"
+                      >
+                        <Upload size={14} /> Browse from Device
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1243,6 +1539,31 @@ function AddWaste(){
                       <p className="text-2xl font-bold text-sky-700 mt-1">Ready for Handover</p>
                       <p className="text-xs text-sky-600 mt-0.5">Available in your inventory</p>
                     </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-5 border border-gray-100 sm:col-span-2 flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Photo of E-Waste</p>
+                        <p className="font-semibold text-slate-900 mt-1">
+                          {photoFile ? photoFile.name : 'No photo attached (optional)'}
+                        </p>
+                        {photoFile && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {(photoFile.size / (1024 * 1024)).toFixed(2)} MB · Attached for upload
+                          </p>
+                        )}
+                      </div>
+                      {photoPreview ? (
+                        <img
+                          src={photoPreview}
+                          alt="Review"
+                          className="size-14 rounded-xl object-cover border border-emerald-200 shadow-xs shrink-0"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">
+                          No photo
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-6 p-4 rounded-xl bg-amber-50 text-xs text-amber-800 border border-amber-200">
                     Prototype estimate only. Final settlement amounts will be confirmed upon facility inspection.
@@ -1278,7 +1599,7 @@ function AddWaste(){
                     {submitting ? (
                       <span className="flex items-center gap-2">
                         <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Saving to inventory...
+                        {photoFile ? 'Uploading photo & saving...' : 'Saving to inventory...'}
                       </span>
                     ) : (
                       <>
