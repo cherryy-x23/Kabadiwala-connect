@@ -2,7 +2,8 @@ import { apiClient, ApiResponse } from '../apiClient';
 import { Material } from '@/data/mockData';
 
 export interface BackendMaterial {
-  id: string;
+  id?: string;
+  _id?: string;
   name: string;
   category: string;
   pricePerKg?: number;
@@ -27,8 +28,8 @@ export const materialsApi = {
     const backendList = res.data?.materials || [];
 
     // Map backend material documents into the frontend Material interface
-    return backendList.map((m) => ({
-      id: m.id,
+    return backendList.map((m: any) => ({
+      id: m.id || m._id?.toString() || '',
       name: m.name,
       category: m.category,
       indicativePrice: m.pricePerKg ?? m.indicativePrice ?? 0,

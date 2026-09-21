@@ -9,7 +9,7 @@ import {
 import Navbar from '@/components/layout/Navbar'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import PageHeader from '@/components/layout/PageHeader'
-import { mockDashboardStats, mockMaterials, mockNotifications, mockRecentActivity, mockRecyclers, mockRequests, mockTransactions, WasteRequest } from '@/data/mockData'
+import { mockDashboardStats, mockMaterials, mockNotifications, mockRecentActivity, mockRecyclers, mockRequests, mockTransactions, WasteRequest, Material } from '@/data/mockData'
 import { DonutChart, MiniChart, StatCard } from '@/components/shared/DashboardWidgets'
 import { WorkflowRoute } from '@/components/workflow/CoreWorkflow'
 import { RecyclerAcceptedPage, RecyclerCompletedPage, RecyclerMaterialsPage, RecyclerTransactionsPage, RecyclerReportsPage, RecyclerNotificationsPage, RecyclerSettingsPage } from '@/components/recycler/RecyclerPortalPages'
@@ -1082,7 +1082,9 @@ function AddWaste(){
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const [step, setStep] = useState(1)
-  const [materials, setMaterials] = useState<typeof mockMaterials>(mockMaterials)
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [loadingMaterials, setLoadingMaterials] = useState(true)
+  const [materialsError, setMaterialsError] = useState<string | null>(null)
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('')
   const [quantityKg, setQuantityKg] = useState('10')
   const [notes, setNotes] = useState('')
@@ -1135,30 +1137,45 @@ function AddWaste(){
     }
   }
 
-  useEffect(() => {
+  const fetchMaterials = () => {
     let mounted = true
+    setLoadingMaterials(true)
+    setMaterialsError(null)
     materialsApi.getMaterials()
       .then((data) => {
-        if (mounted && data.length > 0) {
+        if (!mounted) return
+        if (data.length > 0) {
           setMaterials(data)
           setSelectedMaterialId(data[0].id)
+        } else {
+          setMaterialsError('No active materials found in platform catalog.')
         }
       })
       .catch((err) => {
+        if (!mounted) return
         console.warn('Could not fetch backend materials:', err)
-        if (mockMaterials.length > 0) setSelectedMaterialId(mockMaterials[0].id)
+        setMaterialsError('Failed to load verified materials catalog from server. Please check your connection.')
+      })
+      .finally(() => {
+        if (mounted) setLoadingMaterials(false)
       })
     return () => { mounted = false }
+  }
+
+  useEffect(() => {
+    const cleanup = fetchMaterials()
+    return () => { if (cleanup) cleanup() }
   }, [])
 
   const selectedMaterial = materials.find(m => m.id === selectedMaterialId) || materials[0]
-  const indicativeRate = selectedMaterial?.indicativePrice || 100
+  const indicativeRate = selectedMaterial?.indicativePrice || 0
   const parsedWeight = parseFloat(quantityKg) || 0
   const estimatedTotalValue = Math.round(parsedWeight * indicativeRate)
 
   const handleCreateWaste = async () => {
-    if (!selectedMaterial?.id) {
-      setSubmitError('Please select a valid material.')
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/
+    if (!selectedMaterial?.id || !objectIdRegex.test(selectedMaterial.id)) {
+      setSubmitError('Please select a valid material from the verified catalog.')
       return
     }
     if (parsedWeight <= 0) {
@@ -1298,34 +1315,60 @@ function AddWaste(){
                   <p className="text-sm text-gray-500 mt-1">
                     Choose from the active materials catalog with verified indicative rates.
                   </p>
-                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mt-6 max-h-96 overflow-y-auto pr-1">
-                    {materials.map((m) => {
-                      const isSelected = selectedMaterialId === m.id
-                      return (
+                  {loadingMaterials ? (
+                    <div className="py-16 text-center text-gray-500">
+                      <div className="size-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-sm font-medium">Loading verified materials catalog...</p>
+                    </div>
+                  ) : materialsError ? (
+                    <div className="mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-800 flex items-start gap-3">
+                      <AlertCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-rose-900">Catalog Unavailable</p>
+                        <p className="mt-0.5">{materialsError}</p>
                         <button
-                          key={m.id}
                           type="button"
-                          onClick={() => setSelectedMaterialId(m.id)}
-                          className={`p-4 rounded-2xl border text-left transition-all ${
-                            isSelected
-                              ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
-                          }`}
+                          onClick={fetchMaterials}
+                          className="mt-2 text-xs font-semibold text-rose-700 underline hover:text-rose-900"
                         >
-                          <div className="flex items-start justify-between">
-                            <span className="size-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                              <Recycle size={18} />
-                            </span>
-                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">
-                              ₹{m.indicativePrice}/kg
-                            </span>
-                          </div>
-                          <p className="text-sm font-bold text-slate-900 mt-3">{m.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{m.category}</p>
+                          Retry loading catalog
                         </button>
-                      )
-                    })}
-                  </div>
+                      </div>
+                    </div>
+                  ) : materials.length === 0 ? (
+                    <div className="mt-6 p-6 rounded-2xl bg-gray-50 border border-gray-200 text-center text-gray-500">
+                      <p className="text-sm">No active materials currently available in the platform catalog.</p>
+                    </div>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mt-6 max-h-96 overflow-y-auto pr-1">
+                      {materials.map((m) => {
+                        const isSelected = selectedMaterialId === m.id
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setSelectedMaterialId(m.id)}
+                            className={`p-4 rounded-2xl border text-left transition-all ${
+                              isSelected
+                                ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
+                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <span className="size-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <Recycle size={18} />
+                              </span>
+                              <span className="text-xs font-semibold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">
+                                ₹{m.indicativePrice}/kg
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-slate-900 mt-3">{m.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{m.category}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1585,7 +1628,8 @@ function AddWaste(){
                   <button
                     type="button"
                     onClick={() => setStep(step + 1)}
-                    className="btn-primary"
+                    disabled={step === 1 && (loadingMaterials || !selectedMaterial?.id || !/^[0-9a-fA-F]{24}$/.test(selectedMaterial.id))}
+                    className="btn-primary disabled:opacity-50"
                   >
                     Continue <ArrowRight size={16} className="ml-2" />
                   </button>

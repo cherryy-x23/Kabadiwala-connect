@@ -167,9 +167,10 @@ async function runPhotoUploadTests() {
 
     // -------------------------------------------------------------
     // Test 2: Collector can create waste with a valid image (multipart/form-data)
-    // -------------------------------------------------------------
-    // Create a 10KB mock JPEG buffer
-    const mockJpgBuffer = Buffer.alloc(10 * 1024, 0xff);
+    // Create a valid JPEG buffer
+    const validJpegBase64 =
+      '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8APw//2Q==';
+    const mockJpgBuffer = Buffer.from(validJpegBase64, 'base64');
     const formWithPhoto = new FormData();
     formWithPhoto.append('materialId', material._id.toString());
     formWithPhoto.append('quantityKg', '15');

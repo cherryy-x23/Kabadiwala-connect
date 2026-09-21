@@ -38,7 +38,7 @@ const materialSchema = new Schema<IMaterial>(
     indicativePrice: {
       type: Number,
       default: function (this: any) {
-        return this.pricePerKg;
+        return this?.pricePerKg;
       },
       min: [0, 'Indicative price cannot be negative'],
     },
