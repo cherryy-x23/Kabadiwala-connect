@@ -32,10 +32,14 @@ function createTestProxyServer(targetBackendUrl: string): http.Server {
   ]);
 
   const HOP_BY_HOP_RES = new Set([
-    'transfer-encoding',
+    'alt-svc',
     'connection',
+    'content-encoding',
+    'content-length',
     'keep-alive',
     'set-cookie',
+    'transfer-encoding',
+    'upgrade',
   ]);
 
   return http.createServer(async (req, res) => {
@@ -48,7 +52,7 @@ function createTestProxyServer(targetBackendUrl: string): http.Server {
       for (const [key, val] of Object.entries(req.headers)) {
         if (!val) continue;
         const lower = key.toLowerCase();
-        if (!HOP_BY_HOP_REQ.has(lower)) {
+        if (!HOP_BY_HOP_REQ.has(lower) && lower !== 'accept-encoding') {
           if (Array.isArray(val)) {
             val.forEach((v) => forwardHeaders.append(key, v));
           } else {
@@ -137,7 +141,7 @@ async function runProxyAuthTests() {
   const proxyApiUrl = `http://localhost:${proxyPort}/api/v1`;
 
   let passedTests = 0;
-  const totalTests = 13;
+  const totalTests = 14;
 
   try {
     mongod = await MongoMemoryServer.create();
@@ -203,7 +207,7 @@ async function runProxyAuthTests() {
     console.log(`  Next.js Proxy running on :${proxyPort}\n`);
 
     // --- TEST 1: Login through proxy ---
-    console.log('Test 1: POST /api/v1/auth/login through Next.js proxy');
+    console.log('Test 1: POST /api/v1/auth/login through Next.js proxy returns non-null body & valid contract');
     const loginRes = await fetch(`${proxyApiUrl}/auth/login`, {
       method: 'POST',
       headers: {
@@ -218,11 +222,43 @@ async function runProxyAuthTests() {
     const tokenCookie = extractTokenCookie(loginRes.headers);
     const loginData: any = await loginRes.json();
 
-    if (loginRes.status === 200 && loginData.data?.user?.role === 'collector' && tokenCookie) {
-      console.log('  ✅ Passed: Login succeeded through proxy and returned token cookie');
+    if (
+      loginRes.status === 200 &&
+      loginData !== null &&
+      typeof loginData === 'object' &&
+      loginData.success === true &&
+      loginData.data !== null &&
+      loginData.data.user?.role === 'collector' &&
+      tokenCookie
+    ) {
+      console.log('  ✅ Passed: Login response is non-null, matches { success: true, data: { user: ... } }');
       passedTests++;
     } else {
       throw new Error(`Test 1 Failed: status ${loginRes.status}, data: ${JSON.stringify(loginData)}`);
+    }
+
+    // --- TEST 1b: Invalid login through proxy returns 401 with preserved non-null error body ---
+    console.log('\nTest 1b: POST /api/v1/auth/login with wrong password returns 401 with non-null error body');
+    const invalidLoginRes = await fetch(`${proxyApiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'collector_proxy@demo.com',
+        password: 'WrongPassword!',
+      }),
+    });
+    const invalidLoginData: any = await invalidLoginRes.json();
+
+    if (
+      invalidLoginRes.status === 401 &&
+      invalidLoginData !== null &&
+      invalidLoginData.success === false &&
+      invalidLoginData.message === 'Invalid email or password'
+    ) {
+      console.log('  ✅ Passed: 401 error response preserved as valid non-null JSON');
+      passedTests++;
+    } else {
+      throw new Error(`Test 1b Failed: status ${invalidLoginRes.status}, data: ${JSON.stringify(invalidLoginData)}`);
     }
 
     // --- TEST 2: Set-Cookie forwarding and sanitization ---

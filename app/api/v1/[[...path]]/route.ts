@@ -21,10 +21,14 @@ const HOP_BY_HOP_REQUEST_HEADERS = new Set([
 ]);
 
 const HOP_BY_HOP_RESPONSE_HEADERS = new Set([
-  'transfer-encoding',
+  'alt-svc',
   'connection',
+  'content-encoding', // fetch automatically decompresses; forwarding this corrupts client decoding
+  'content-length',   // decompressed body length differs from upstream compressed length
   'keep-alive',
-  'set-cookie', // handled explicitly below
+  'set-cookie',       // handled explicitly with domain stripping and Lax rewrite
+  'transfer-encoding',
+  'upgrade',
 ]);
 
 interface RouteContext {
@@ -41,7 +45,9 @@ async function handleProxy(request: NextRequest, context: RouteContext): Promise
   const forwardHeaders = new Headers();
   request.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (!HOP_BY_HOP_REQUEST_HEADERS.has(lower)) {
+    // Strip hop-by-hop headers and accept-encoding so upstream doesn't send compressed payload
+    // whose encoding headers would conflict with Node's automatic fetch decompression
+    if (!HOP_BY_HOP_REQUEST_HEADERS.has(lower) && lower !== 'accept-encoding') {
       forwardHeaders.set(key, value);
     }
   });

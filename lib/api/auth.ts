@@ -44,7 +44,10 @@ export const authApi = {
    */
   register: async (input: RegisterInput): Promise<AuthData> => {
     const res = await apiClient.post<ApiResponse<AuthData>>('/auth/register', input);
-    return res.data!;
+    if (!res || !res.data) {
+      throw new Error(res?.message || 'Registration failed - no user data returned from server');
+    }
+    return res.data;
   },
 
   /**
@@ -53,7 +56,10 @@ export const authApi = {
    */
   login: async (credentials: LoginInput): Promise<AuthData> => {
     const res = await apiClient.post<ApiResponse<AuthData>>('/auth/login', credentials);
-    return res.data!;
+    if (!res || !res.data) {
+      throw new Error(res?.message || 'Login failed - no user data returned from server');
+    }
+    return res.data;
   },
 
   /**
@@ -61,7 +67,10 @@ export const authApi = {
    */
   getCurrentUser: async (): Promise<AuthData> => {
     const res = await apiClient.get<ApiResponse<AuthData>>('/auth/me');
-    return res.data!;
+    if (!res || !res.data) {
+      throw new Error(res?.message || 'Failed to retrieve session - no user data returned');
+    }
+    return res.data;
   },
 
   /**

@@ -59,10 +59,10 @@ async function request<T = any>(
   options: RequestInit = {}
 ): Promise<T> {
   let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const baseUrl = getApiBaseUrl().replace(/\/$/, '');
-  if (baseUrl === '/api/v1' && cleanEndpoint.startsWith('/api/v1')) {
+  if (cleanEndpoint.startsWith('/api/v1')) {
     cleanEndpoint = cleanEndpoint.substring('/api/v1'.length);
   }
+  const baseUrl = getApiBaseUrl().replace(/\/$/, '');
   const url = `${baseUrl}${cleanEndpoint}`;
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
@@ -89,15 +89,31 @@ async function request<T = any>(
   }
 
   let data: any;
-  const contentType = res.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
+  const contentType = res.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
+  if (isJson) {
     try {
       data = await res.json();
-    } catch {
-      data = null;
+    } catch (parseErr: any) {
+      if (!res.ok) {
+        let rawText = '';
+        try {
+          rawText = await res.text();
+        } catch {
+          // ignore
+        }
+        throw new ApiError(res.status, rawText || `Request failed with status ${res.status}`);
+      }
+      throw new ApiError(res.status, `Failed to parse JSON response from server: ${parseErr?.message || parseErr}`);
     }
   } else {
-    data = await res.text();
+    const rawText = await res.text();
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = rawText;
+    }
   }
 
   if (!res.ok) {
@@ -105,6 +121,13 @@ async function request<T = any>(
       data?.message ||
       (typeof data === 'string' && data.length > 0 ? data : `Request failed with status ${res.status}`);
     throw new ApiError(res.status, errorMessage, data?.errors || data);
+  }
+
+  if (data === null || data === undefined) {
+    if (res.status === 204 || res.status === 205) {
+      return { success: true } as unknown as T;
+    }
+    throw new ApiError(res.status, 'Empty response received from backend service');
   }
 
   return data as T;
