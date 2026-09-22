@@ -17,8 +17,30 @@ export class ApiError extends Error {
   }
 }
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+/**
+ * Resolves the appropriate API base URL:
+ * - In production (browser or SSR), always uses the same-origin proxy: '/api/v1'
+ * - In browser on non-localhost domains (e.g. Vercel deployment), uses '/api/v1'
+ * - In local development (localhost), uses NEXT_PUBLIC_API_BASE_URL or 'http://localhost:5000/api/v1'
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (!isLocalhost) {
+      return '/api/v1';
+    }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return '/api/v1';
+  }
+
+  return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -36,8 +58,12 @@ async function request<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = `${API_BASE_URL}${cleanEndpoint}`;
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const baseUrl = getApiBaseUrl().replace(/\/$/, '');
+  if (baseUrl === '/api/v1' && cleanEndpoint.startsWith('/api/v1')) {
+    cleanEndpoint = cleanEndpoint.substring('/api/v1'.length);
+  }
+  const url = `${baseUrl}${cleanEndpoint}`;
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 

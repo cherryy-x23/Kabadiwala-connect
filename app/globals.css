@@ -169,11 +169,14 @@
   }
 
   .drawer-overlay {
-    @apply fixed inset-0 bg-black/50 z-40;
+    @apply fixed inset-0 bg-black/50 z-40 backdrop-blur-xs;
   }
 
   .drawer-content {
-    @apply fixed left-0 top-0 h-screen w-64 bg-white shadow-lg z-50 transform transition-transform duration-300;
+    height: 100dvh;
+    max-height: 100dvh;
+    width: min(85vw, 20rem);
+    @apply fixed left-0 top-0 bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col;
   }
 
   .drawer-content.open {
