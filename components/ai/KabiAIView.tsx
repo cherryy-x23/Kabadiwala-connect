@@ -40,7 +40,7 @@ function formatTime(timestampStr: string) {
 }
 
 export default function KabiAIView() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -82,6 +82,7 @@ export default function KabiAIView() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (isAuthenticated) {
       loadConversations();
     } else {
@@ -89,7 +90,7 @@ export default function KabiAIView() {
       setSessionId(null);
       setConversations([]);
     }
-  }, [isAuthenticated, loadConversations]);
+  }, [isAuthenticated, isLoading, loadConversations]);
 
   // Select a past conversation session
   const selectSession = async (targetSessionId: string) => {

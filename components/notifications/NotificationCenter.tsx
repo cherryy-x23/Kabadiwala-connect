@@ -86,7 +86,7 @@ function formatNotificationTime(dateStr: string) {
 }
 
 export default function NotificationCenter({ role }: NotificationCenterProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { refreshUnreadCount } = useNotificationCount();
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -97,6 +97,7 @@ export default function NotificationCenter({ role }: NotificationCenterProps) {
   const [markingAll, setMarkingAll] = useState<boolean>(false);
 
   const fetchNotifications = useCallback(async () => {
+    if (isLoading) return;
     if (!isAuthenticated) {
       setNotifications([]);
       setLoading(false);
@@ -118,7 +119,7 @@ export default function NotificationCenter({ role }: NotificationCenterProps) {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, filter]);
+  }, [isAuthenticated, isLoading, filter]);
 
   useEffect(() => {
     fetchNotifications();

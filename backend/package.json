@@ -24,7 +24,8 @@
     "test:phase7d": "tsx scripts/test-phase7d.ts",
     "test:phase8": "tsx scripts/test-phase8.ts",
     "test:phase9": "tsx scripts/test-phase9.ts",
-    "test:photo": "tsx scripts/test-photo-upload.ts"
+    "test:photo": "tsx scripts/test-photo-upload.ts",
+    "test:prod-auth": "tsx scripts/test-prod-auth.ts"
   },
   "keywords": [
     "e-waste",

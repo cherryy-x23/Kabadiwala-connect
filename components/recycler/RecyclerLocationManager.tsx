@@ -16,7 +16,7 @@ import { recyclersApi, BackendRecycler } from '@/lib/api/recyclers'
 import { useAuth } from '@/lib/authContext'
 
 export default function RecyclerLocationManager() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   const [profile, setProfile] = useState<BackendRecycler | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,12 +54,13 @@ export default function RecyclerLocationManager() {
   }
 
   useEffect(() => {
+    if (isLoading) return
     if (isAuthenticated && user?.role === 'recycler') {
       loadProfile()
     } else {
       setLoading(false)
     }
-  }, [isAuthenticated, user?.role])
+  }, [isAuthenticated, user?.role, isLoading])
 
   // Detect location via browser geolocation
   const handleDetectGPS = () => {

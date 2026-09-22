@@ -8,13 +8,41 @@ import { errorHandler } from './middleware/errorHandler';
 
 const app: Application = express();
 
+app.set('trust proxy', 1);
+
+const productionVercelOrigin = 'https://kabadiwala-connect-taupe.vercel.app';
+const clientUrlOrigins = (env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([
+    productionVercelOrigin,
+    ...clientUrlOrigins,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ])
+);
+
 // Security & Parsing Middleware
 app.use(
   cors({
-    origin: [env.CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (requestOrigin, callback) => {
+      // Allow non-browser requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!requestOrigin) {
+        return callback(null, true);
+      }
+      const normalizedOrigin = requestOrigin.replace(/\/$/, '');
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200,
   })
 );
 

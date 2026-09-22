@@ -143,7 +143,7 @@ async function runPhase7aTests() {
       loginJson.data.user.role === 'collector' &&
       collectorCookie &&
       setCookieHeader?.toLowerCase().includes('httponly') &&
-      setCookieHeader?.toLowerCase().includes('samesite=lax')
+      (setCookieHeader?.toLowerCase().includes('samesite=lax') || setCookieHeader?.toLowerCase().includes('samesite=none'))
     ) {
       console.log('  ✅ Passed: Collector logged in with secure HttpOnly token cookie');
       passedTests++;

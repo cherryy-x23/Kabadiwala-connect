@@ -186,7 +186,7 @@ function DashboardShell({ role, children }: {role:'collector'|'recycler'|'admin'
 }
 
 function CollectorDashboard(){
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [wasteItems, setWasteItems] = useState<WasteItem[]>([])
   const [requests, setRequests] = useState<HandoverRequestItem[]>([])
   const [liveRecyclers, setLiveRecyclers] = useState<any[]>([])
@@ -194,7 +194,9 @@ function CollectorDashboard(){
 
   useEffect(() => {
     let mounted = true
+    if (isLoading) return
     if (isAuthenticated && user?.role === 'collector') {
+      setLoading(true)
       Promise.allSettled([
         wasteApi.getMyWasteItems(),
         requestsApi.getMyRequests(),
@@ -213,7 +215,7 @@ function CollectorDashboard(){
       setLoading(false)
     }
     return () => { mounted = false }
-  }, [isAuthenticated, user?.role])
+  }, [isAuthenticated, user?.role, isLoading])
 
   const isReal = isAuthenticated && user?.role === 'collector'
   const totalKg = wasteItems.reduce((sum, w) => sum + w.quantityKg, 0)
@@ -385,6 +387,7 @@ function CollectorDashboard(){
 }
 
 function CollectorInventoryView(){
+  const { isAuthenticated, isLoading } = useAuth()
   const [items, setItems] = useState<WasteItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -405,8 +408,13 @@ function CollectorInventoryView(){
   }
 
   useEffect(() => {
-    fetchItems()
-  }, [])
+    if (isLoading) return
+    if (isAuthenticated) {
+      fetchItems()
+    } else {
+      setLoading(false)
+    }
+  }, [isAuthenticated, isLoading])
 
   const filtered = items.filter(i => filter === 'all' ? true : i.status === filter)
   const availableItems = items.filter(i => i.status === 'available')
@@ -692,7 +700,7 @@ function CollectorPage({ type }: {type:string}){
 }
 
 function RequestsView(){
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [realRequests, setRealRequests] = useState<HandoverRequestItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -700,6 +708,7 @@ function RequestsView(){
   const filters = ['All', 'Pending', 'Accepted', 'Scheduled', 'In Transit', 'Completed', 'Rejected']
 
   const fetchRequests = () => {
+    if (isLoading) return
     if (isAuthenticated) {
       setLoading(true)
       setError(null)
@@ -721,7 +730,7 @@ function RequestsView(){
 
   useEffect(() => {
     fetchRequests()
-  }, [isAuthenticated])
+  }, [isAuthenticated, isLoading])
 
   const filteredReal = realRequests.filter(r => filter === 'All' ? true : r.status.toLowerCase() === filter.toLowerCase().replace(' ', '_'))
 
@@ -765,14 +774,14 @@ function RequestsView(){
 }
 
 function TransactionsView() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const [realTransactions, setRealTransactions] = useState<TransactionItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
   const fetchTransactions = () => {
-    if (!isAuthenticated) return
+    if (isLoading || !isAuthenticated) return
     setLoading(true)
     setError(null)
     transactionsApi.getMyTransactions()
@@ -789,7 +798,7 @@ function TransactionsView() {
 
   useEffect(() => {
     fetchTransactions()
-  }, [isAuthenticated])
+  }, [isAuthenticated, isLoading])
 
   const filteredReal = realTransactions.filter(t => {
     if (!searchTerm) return true
@@ -921,13 +930,13 @@ function TransactionsView() {
 }
 
 function EarningsView() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const [realTransactions, setRealTransactions] = useState<TransactionItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (isLoading || !isAuthenticated) return
     setLoading(true)
     setError(null)
     transactionsApi.getMyTransactions()
@@ -940,7 +949,7 @@ function EarningsView() {
       .finally(() => {
         setLoading(false)
       })
-  }, [isAuthenticated])
+  }, [isAuthenticated, isLoading])
 
   const totalEarnings = realTransactions
     .filter(t => t.status === 'completed')
@@ -1080,7 +1089,7 @@ function SettingsView(){return <div className="max-w-3xl card p-6"><h2 className
 
 function AddWaste(){
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [step, setStep] = useState(1)
   const [materials, setMaterials] = useState<Material[]>([])
   const [loadingMaterials, setLoadingMaterials] = useState(true)
@@ -1173,6 +1182,10 @@ function AddWaste(){
   const estimatedTotalValue = Math.round(parsedWeight * indicativeRate)
 
   const handleCreateWaste = async () => {
+    if (!isAuthenticated) {
+      setSubmitError('Authentication required. Please log in again.')
+      return
+    }
     const objectIdRegex = /^[0-9a-fA-F]{24}$/
     if (!selectedMaterial?.id || !objectIdRegex.test(selectedMaterial.id)) {
       setSubmitError('Please select a valid material from the verified catalog.')
@@ -1199,6 +1212,49 @@ function AddWaste(){
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardShell role="collector">
+        <PageHeader
+          title="Add e-waste"
+          description="Log your collected e-waste into your verified digital inventory."
+        />
+        <div className="container-app py-16 text-center">
+          <div className="size-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Verifying collector session...</p>
+        </div>
+      </DashboardShell>
+    )
+  }
+
+  if (!isAuthenticated || user?.role !== 'collector') {
+    return (
+      <DashboardShell role="collector">
+        <PageHeader
+          title="Add e-waste"
+          description="Log your collected e-waste into your verified digital inventory."
+        />
+        <div className="container-app py-16 text-center max-w-md mx-auto">
+          <div className="size-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Collector Authentication Required</h2>
+          <p className="text-gray-500 text-sm mt-2">
+            Please log in as a verified collector to log e-waste items and manage your digital inventory.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link href="/login" className="btn-primary">
+              Log In
+            </Link>
+            <Link href="/register?role=collector" className="btn-outline">
+              Register
+            </Link>
+          </div>
+        </div>
+      </DashboardShell>
+    )
   }
 
   return (
@@ -1673,7 +1729,7 @@ function KabiAI(){
 }
 
 function RecyclerDashboard(){
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [requests, setRequests] = useState<HandoverRequestItem[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -1694,12 +1750,13 @@ function RecyclerDashboard(){
   }
 
   useEffect(() => {
+    if (isLoading) return
     if (isAuthenticated && user?.role === 'recycler') {
       fetchRequests()
     } else {
       setLoading(false)
     }
-  }, [isAuthenticated, user?.role])
+  }, [isAuthenticated, user?.role, isLoading])
 
   const handleAccept = async (id: string) => {
     setActionLoading(id)
